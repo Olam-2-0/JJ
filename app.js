@@ -3,6 +3,19 @@
 // Playful Neo-Pop / Soft Neubrutalism UI/UX Engine
 // ==========================================================================
 
+// Guard against SSR / Serverless function execution environments (Vercel Node.js runner)
+if (typeof window === 'undefined') {
+  globalThis.window = { location: { hash: '' }, scrollTo: () => {} };
+}
+if (typeof document === 'undefined') {
+  globalThis.document = {
+    addEventListener: () => {},
+    getElementById: () => null,
+    querySelectorAll: () => [],
+    createElement: () => ({ classList: { add: () => {}, remove: () => {} }, style: {}, setAttribute: () => {} })
+  };
+}
+
 // Global Application State Store
 const AppState = {
   // Current Student
@@ -2468,42 +2481,44 @@ function renderApp() {
   renderFocusAnalytics(AppState.analytics.activeTab);
 }
 
-// Window Event Listeners
-document.addEventListener('DOMContentLoaded', () => {
-  loadSavedState();
-  renderApp();
-  setupAmbientControls();
+// Window Event Listeners (Client-side execution only)
+if (typeof window !== 'undefined' && typeof document !== 'undefined' && document.addEventListener) {
+  document.addEventListener('DOMContentLoaded', () => {
+    loadSavedState();
+    renderApp();
+    setupAmbientControls();
 
-  // Initialize modal due datetime default to tomorrow same hour
-  setQuickDueDateTime(24);
+    // Initialize modal due datetime default to tomorrow same hour
+    setQuickDueDateTime(24);
 
-  // Periodic refresh for live time-left countdowns every 30 seconds
-  setInterval(() => {
-    renderMyDayPendingHomeworks();
-    if (document.getElementById('view-assignments') && document.getElementById('view-assignments').style.display !== 'none') {
-      renderAssignments();
-    }
-  }, 30000);
+    // Periodic refresh for live time-left countdowns every 30 seconds
+    setInterval(() => {
+      renderMyDayPendingHomeworks();
+      if (document.getElementById('view-assignments') && document.getElementById('view-assignments').style.display !== 'none') {
+        renderAssignments();
+      }
+    }, 30000);
 
-  // Route hash check
-  const hash = window.location.hash.replace('#', '') || 'schedule';
-  switchView(hash);
+    // Route hash check
+    const hash = window.location.hash.replace('#', '') || 'schedule';
+    switchView(hash);
 
-  // Tab click listeners
-  document.querySelectorAll('.nav-tab-btn, .mobile-nav-item').forEach(btn => {
-    btn.addEventListener('click', (e) => {
-      e.preventDefault();
-      const target = btn.dataset.view;
-      if (target) switchView(target);
+    // Tab click listeners
+    document.querySelectorAll('.nav-tab-btn, .mobile-nav-item').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.preventDefault();
+        const target = btn.dataset.view;
+        if (target) switchView(target);
+      });
     });
+
+    // Homework modal
+    const openModalBtn = document.getElementById('openModalBtn');
+    const closeModalBtn = document.getElementById('closeModalBtn');
+    if (openModalBtn) openModalBtn.addEventListener('click', openAddHomeworkModal);
+    if (closeModalBtn) closeModalBtn.addEventListener('click', closeAddHomeworkModal);
+
+    const hwForm = document.getElementById('newHomeworkForm');
+    if (hwForm) hwForm.addEventListener('submit', handleAddHomeworkSubmit);
   });
-
-  // Homework modal
-  const openModalBtn = document.getElementById('openModalBtn');
-  const closeModalBtn = document.getElementById('closeModalBtn');
-  if (openModalBtn) openModalBtn.addEventListener('click', openAddHomeworkModal);
-  if (closeModalBtn) closeModalBtn.addEventListener('click', closeAddHomeworkModal);
-
-  const hwForm = document.getElementById('newHomeworkForm');
-  if (hwForm) hwForm.addEventListener('submit', handleAddHomeworkSubmit);
-});
+}
