@@ -143,6 +143,32 @@ from auth.users
 on conflict (id) do nothing;
 `;
 
+  // Robust Supabase URL normalizer: strips subpaths like /rest/v1, /auth/v1, trailing slashes,
+  // or extracts project ref if dashboard URL is pasted, preventing "Invalid path specified in request URL"
+  function normalizeSupabaseUrl(rawUrl) {
+    if (!rawUrl) return '';
+    let url = rawUrl.trim();
+
+    // 1. If user pasted the dashboard project URL, e.g. https://supabase.com/dashboard/project/abcdefghijk/...
+    const dashMatch = url.match(/supabase\.com\/dashboard\/project\/([a-zA-Z0-9_-]+)/i);
+    if (dashMatch && dashMatch[1]) {
+      return `https://${dashMatch[1]}.supabase.co`;
+    }
+
+    // 2. Prepend https:// if protocol was omitted
+    if (!url.startsWith('http://') && !url.startsWith('https://')) {
+      url = 'https://' + url;
+    }
+
+    try {
+      const parsed = new URL(url);
+      // parsed.origin extracts strictly "https://<subdomain>.supabase.co" with zero paths, queries, or trailing slashes
+      return parsed.origin;
+    } catch (e) {
+      return url.replace(/\/+$/, '').replace(/\/(rest|auth)\/.*$/i, '');
+    }
+  }
+
   function isConfigured() {
     const url = localStorage.getItem(STORAGE_KEYS.URL);
     const key = localStorage.getItem(STORAGE_KEYS.KEY);
@@ -150,9 +176,15 @@ on conflict (id) do nothing;
   }
 
   function getStoredCredentials() {
+    const rawUrl = localStorage.getItem(STORAGE_KEYS.URL) || '';
+    const cleanUrl = normalizeSupabaseUrl(rawUrl);
+    // Auto-repair any stored URL that had subpaths like /rest/v1
+    if (rawUrl && cleanUrl !== rawUrl) {
+      localStorage.setItem(STORAGE_KEYS.URL, cleanUrl);
+    }
     return {
-      url: localStorage.getItem(STORAGE_KEYS.URL) || '',
-      key: localStorage.getItem(STORAGE_KEYS.KEY) || ''
+      url: cleanUrl,
+      key: (localStorage.getItem(STORAGE_KEYS.KEY) || '').trim()
     };
   }
 
@@ -170,16 +202,19 @@ on conflict (id) do nothing;
     updateCloudStatusUI();
   }
 
-  async function connect(url, key) {
-    if (!url || !key) {
+  async function connect(rawUrl, rawKey) {
+    if (!rawUrl || !rawKey) {
       throw new Error('Supabase URL and Anon Key are required.');
     }
     if (!window.supabase || !window.supabase.createClient) {
       throw new Error('Supabase client SDK is not loaded. Check internet connection.');
     }
 
+    const url = normalizeSupabaseUrl(rawUrl);
+    const key = rawKey.trim();
+
     try {
-      const testClient = window.supabase.createClient(url.trim(), key.trim());
+      const testClient = window.supabase.createClient(url, key);
       // Test connectivity by checking auth session
       const { data, error } = await testClient.auth.getSession();
       if (error && !error.message.includes('Auth session')) {
@@ -187,8 +222,8 @@ on conflict (id) do nothing;
       }
       
       client = testClient;
-      localStorage.setItem(STORAGE_KEYS.URL, url.trim());
-      localStorage.setItem(STORAGE_KEYS.KEY, key.trim());
+      localStorage.setItem(STORAGE_KEYS.URL, url);
+      localStorage.setItem(STORAGE_KEYS.KEY, key);
       localStorage.setItem(STORAGE_KEYS.MODE, 'cloud');
 
       listenAuthChanges();

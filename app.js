@@ -18,16 +18,16 @@ if (typeof document === 'undefined') {
 
 // Global Application State Store
 const AppState = {
-  // Current Student
+  // Current Student (Clean initial state until user signs in)
   user: {
-    id: 'student',
+    id: '',
     name: 'Student Scholar',
     email: '',
-    major: 'Computer Science',
-    year: '3rd Year',
+    major: 'General Studies',
+    year: '1st Year',
     companion: 'both', // 'pomi', 'barnaby', 'both'
-    streakDays: 1,
-    coins: 100,
+    streakDays: 0,
+    coins: 0,
     waterLogged: 0,
     waterGoal: 6
   },
@@ -150,19 +150,18 @@ const AppState = {
     global: [
       { rank: 1, name: 'Elena Rostova', college: 'ETH Zurich', major: 'CS & Robotics', streak: 42, hours: 148, swags: 8, avatar: 'ER' },
       { rank: 2, name: 'Marcus Sterling', college: 'Stanford University', major: 'Bioengineering', streak: 38, hours: 132, swags: 7, avatar: 'MS' },
-      { rank: 3, name: 'Aanya Patel', college: 'State Campus Central', major: 'Pre-Med Biology', streak: 12, hours: 56, swags: 5, avatar: 'AP' },
-      { rank: 4, name: 'Lucas Dubois', college: 'Sorbonne University', major: 'Mathematics', streak: 10, hours: 44, swags: 4, avatar: 'LD' },
-      { rank: 5, name: 'Hana Tanaka', college: 'University of Tokyo', major: 'Informatics', streak: 9, hours: 41, swags: 4, avatar: 'HT' },
-      { rank: 6, name: 'Liam O\'Connor', college: 'Trinity College Dublin', major: 'History & Arts', streak: 8, hours: 36, swags: 3, avatar: 'LO' },
-      { rank: 7, name: 'Jishnu', college: 'State Campus Central', major: 'Computer Science', streak: 7, hours: 32, swags: 4, avatar: 'JV', isUser: true },
-      { rank: 8, name: 'Priya Sharma', college: 'IIT Bombay', major: 'Electrical Eng', streak: 6, hours: 28, swags: 3, avatar: 'PS' }
+      { rank: 3, name: 'Chen Wei', college: 'National University of SG', major: 'Data Science', streak: 24, hours: 86, swags: 6, avatar: 'CW' },
+      { rank: 4, name: 'Lucas Dubois', college: 'Sorbonne University', major: 'Mathematics', streak: 18, hours: 64, swags: 5, avatar: 'LD' },
+      { rank: 5, name: 'Hana Tanaka', college: 'University of Tokyo', major: 'Informatics', streak: 14, hours: 52, swags: 4, avatar: 'HT' },
+      { rank: 6, name: 'Nora Al-Mansoor', college: 'Oxford University', major: 'Economics', streak: 11, hours: 41, swags: 3, avatar: 'NM' },
+      { rank: 7, name: 'Liam O\'Connor', college: 'Trinity College Dublin', major: 'History & Arts', streak: 8, hours: 36, swags: 3, avatar: 'LO' },
+      { rank: 8, name: 'Priya Sharma', college: 'IIT Bombay', major: 'Electrical Eng', streak: 6, hours: 28, swags: 2, avatar: 'PS' }
     ],
     college: [
       { rank: 1, name: 'Devon Kim', college: 'State Campus Central', major: 'Software Eng', streak: 21, hours: 84, swags: 6, avatar: 'DK' },
-      { rank: 2, name: 'Aanya Patel', college: 'State Campus Central', major: 'Pre-Med Biology', streak: 12, hours: 56, swags: 5, avatar: 'AP' },
-      { rank: 3, name: 'Jishnu', college: 'State Campus Central', major: 'Computer Science', streak: 7, hours: 32, swags: 4, avatar: 'JV', isUser: true },
-      { rank: 4, name: 'Samira Gomez', college: 'State Campus Central', major: 'Cognitive Science', streak: 5, hours: 22, swags: 3, avatar: 'SG' },
-      { rank: 5, name: 'Tyler Brooks', college: 'State Campus Central', major: 'Architecture', streak: 4, hours: 18, swags: 2, avatar: 'TB' }
+      { rank: 2, name: 'Maya Chen', college: 'State Campus Central', major: 'Cognitive Science', streak: 15, hours: 58, swags: 5, avatar: 'MC' },
+      { rank: 3, name: 'Samira Gomez', college: 'State Campus Central', major: 'Biochemistry', streak: 10, hours: 42, swags: 4, avatar: 'SG' },
+      { rank: 4, name: 'Tyler Brooks', college: 'State Campus Central', major: 'Architecture', streak: 6, hours: 26, swags: 2, avatar: 'TB' }
     ]
   }
 };
@@ -196,7 +195,24 @@ function loadSavedState() {
     const saved = localStorage.getItem('adaptive_student_assistant_state');
     if (saved) {
       const parsed = JSON.parse(saved);
-      if (parsed.user) AppState.user = Object.assign(AppState.user, parsed.user);
+      if (parsed.user) {
+        if (parsed.user.id === 'jishnu' || parsed.user.id === 'aanya' || parsed.user.name === 'Jishnu' || parsed.user.name === 'Aanya' || parsed.user.email === 'jishnu.v@campus.edu') {
+          AppState.user = {
+            id: '',
+            name: 'Student Scholar',
+            email: '',
+            major: 'General Studies',
+            year: '1st Year',
+            companion: 'both',
+            streakDays: 0,
+            coins: 0,
+            waterLogged: 0,
+            waterGoal: 6
+          };
+        } else {
+          AppState.user = Object.assign(AppState.user, parsed.user);
+        }
+      }
       
       // Filter out legacy mock IDs so user starts with a clean slate
       const MOCK_ASG_IDS = new Set(['asg-1', 'asg-2', 'asg-3', 'asg-4']);
@@ -495,26 +511,48 @@ function switchView(viewName) {
   SoundSystem.playPop(480);
 }
 
-// Profile Switcher (Jishnu, Aanya, Guest)
-function switchUserProfile(profileKey) {
-  if (profileKey === 'aanya') {
-    AppState.user.id = 'aanya';
-    AppState.user.name = 'Aanya';
-    AppState.user.email = 'aanya.patel@campus.edu';
-    AppState.user.major = 'Pre-Med Biology';
-    AppState.user.year = '2nd Year';
-    AppState.user.streakDays = 12;
-  } else if (profileKey === 'jishnu') {
-    AppState.user.id = 'jishnu';
-    AppState.user.name = 'Jishnu';
-    AppState.user.email = 'jishnu.v@campus.edu';
-    AppState.user.major = 'Computer Science';
-    AppState.user.year = '3rd Year';
-    AppState.user.streakDays = 7;
+// User Session & Authentication Helpers
+function isUserLoggedIn() {
+  if (typeof CloudEngine !== 'undefined' && CloudEngine.isConfigured()) {
+    return Boolean(CloudEngine.getCurrentUser());
   }
+  return Boolean(AppState.user && AppState.user.email && AppState.user.email.trim().length > 0);
+}
+
+// Redirect unauthenticated users to the sign-in view when they click action buttons
+function requireAuth(actionName = 'perform this action') {
+  if (!isUserLoggedIn()) {
+    SoundSystem.playPop(320);
+    showToast(`Please sign in to ${actionName}.`, 'login');
+    switchView('login');
+    return false;
+  }
+  return true;
+}
+
+function handleUserSignOut() {
+  if (typeof CloudEngine !== 'undefined') {
+    CloudEngine.signOut();
+  }
+  AppState.user = {
+    id: '',
+    name: 'Student Scholar',
+    email: '',
+    major: 'General Studies',
+    year: '1st Year',
+    companion: 'both',
+    streakDays: 0,
+    coins: 0,
+    waterLogged: 0,
+    waterGoal: 6
+  };
+  AppState.schedule = [];
+  AppState.assignments = [];
+  AppState.selectedAssignmentId = null;
   persistState();
   renderApp();
-  showToast(`Welcome back, ${AppState.user.name}! Desk loaded.`, 'waving_hand');
+  switchView('login');
+  showToast('Signed out from study sanctuary.', 'logout');
 }
 
 // Render Water Tracker & Selectable Cup Matrix
@@ -565,6 +603,7 @@ function renderHydrationCups() {
 }
 
 function toggleSpecificCup(cupNumber) {
+  if (!requireAuth('track hydration')) return;
   if (cupNumber === AppState.user.waterLogged) {
     // If clicking the current max filled cup, step back by 1
     AppState.user.waterLogged--;
@@ -588,6 +627,7 @@ function toggleSpecificCup(cupNumber) {
 }
 
 function changeWater(delta) {
+  if (!requireAuth('track hydration')) return;
   if (delta > 0) {
     if (AppState.user.waterLogged < AppState.user.waterGoal) {
       AppState.user.waterLogged++;
@@ -765,6 +805,7 @@ function renderSchedule(filterCategory = 'all') {
 }
 
 function deleteScheduleItem(id) {
+  if (!requireAuth('delete schedule events')) return;
   const idx = AppState.schedule.findIndex(i => i.id === id);
   if (idx !== -1) {
     const deleted = AppState.schedule.splice(idx, 1)[0];
@@ -779,6 +820,7 @@ function deleteScheduleItem(id) {
 }
 
 function toggleScheduleItem(id) {
+  if (!requireAuth('check off schedule events')) return;
   const item = AppState.schedule.find(i => i.id === id);
   if (item) {
     item.completed = !item.completed;
@@ -798,6 +840,7 @@ function toggleScheduleItem(id) {
 
 // "Feeling Tired? Push Study to Tomorrow" Action
 function pushStudyTomorrow() {
+  if (!requireAuth('reschedule study blocks')) return;
   const toast = document.getElementById('push-toast');
   const focusItem = AppState.schedule.find(i => i.category === 'focus');
   if (focusItem) {
@@ -1178,6 +1221,7 @@ function addInlineStepToSelected() {
 }
 
 function toggleAssignmentStep(assignmentId, stepId) {
+  if (!requireAuth('update homework steps')) return;
   const asg = AppState.assignments.find(a => a.id === assignmentId);
   if (!asg || !asg.steps) return;
   const step = asg.steps.find(s => s.id === stepId);
@@ -1205,6 +1249,7 @@ function toggleAssignmentStep(assignmentId, stepId) {
 }
 
 function toggleAssignmentCompleted(assignmentId) {
+  if (!requireAuth('complete homework')) return;
   const asg = AppState.assignments.find(a => a.id === assignmentId);
   if (!asg) return;
   if (asg.status === 'completed') {
@@ -1229,6 +1274,7 @@ function toggleAssignmentCompleted(assignmentId) {
 }
 
 function deleteAssignment(assignmentId) {
+  if (!requireAuth('delete homework')) return;
   const idx = AppState.assignments.findIndex(a => a.id === assignmentId);
   if (idx !== -1) {
     const deleted = AppState.assignments.splice(idx, 1)[0];
@@ -1247,6 +1293,7 @@ function deleteAssignment(assignmentId) {
 }
 
 function postponeAssignment(id) {
+  if (!requireAuth('postpone homework')) return;
   const asg = AppState.assignments.find(a => a.id === id);
   if (asg) {
     asg.dueTimestamp = Date.now() + 24 * 3600 * 1000;
@@ -1267,6 +1314,7 @@ function postponeAssignment(id) {
 // ==========================================================================
 
 function openAddHomeworkModal() {
+  if (!requireAuth('add homework tasks')) return;
   const modal = document.getElementById('add-homework-modal');
   if (modal) modal.classList.add('open');
   SoundSystem.playPop();
@@ -1415,6 +1463,7 @@ function handleAddHomeworkSubmit(e) {
 // ==========================================================================
 
 function triggerStartHomeworkFocus(assignmentId) {
+  if (!requireAuth('start focus blocks')) return;
   const asg = AppState.assignments.find(a => a.id === assignmentId);
   if (!asg) return;
 
@@ -1595,6 +1644,7 @@ function setTimerDuration(minutes) {
 }
 
 function toggleTimer() {
+  if (!requireAuth('start focus sessions')) return;
   const pauseBtn = document.getElementById('timer-pause-btn');
   const pomiText = document.getElementById('pomi-speech-text');
 
@@ -1738,6 +1788,7 @@ function updateTimerDisplay() {
 }
 
 function resetTimer() {
+  if (!requireAuth('use the focus timer')) return;
   clearInterval(AppState.timer.intervalId);
   AppState.timer.isRunning = false;
   AppState.timer.secondsRemaining = AppState.timer.totalSeconds;
@@ -2328,6 +2379,7 @@ function saveTimetableConfig(e) {
 let currentEditingCell = { day: 0, period: 0 };
 
 function openEditCellModal(dayIdx, periodIdx) {
+  if (!requireAuth('edit your timetable')) return;
   currentEditingCell = { day: dayIdx, period: periodIdx };
   const cellKey = `${dayIdx}-${periodIdx}`;
   const cell = AppState.timetable.cells[cellKey];
@@ -2404,6 +2456,7 @@ function clearCurrentCell() {
 let currentEditingPeriodIdx = 0;
 
 function openEditPeriodTimeModal(periodIdx) {
+  if (!requireAuth('edit timetable periods')) return;
   currentEditingPeriodIdx = periodIdx;
   const modal = document.getElementById('period-time-modal');
   const period = AppState.timetable.periods[periodIdx] || { name: `Period ${periodIdx + 1}`, time: '09:00 - 10:00' };
@@ -2497,6 +2550,7 @@ function closeStickerDetailsModal() {
 }
 
 function equipStickerBadge() {
+  if (!requireAuth('equip swags to your profile')) return;
   closeStickerDetailsModal();
   SoundSystem.playSuccessChime();
   showToast('🎖️ Sticker swag pinned to your campus badge!', 'verified');
@@ -2593,16 +2647,27 @@ function renderLeaderboardRows(data, tbody) {
 
 // Global App Initializer
 function renderApp() {
+  const loggedIn = isUserLoggedIn();
   // Update Header Badges
   const streakEl = document.getElementById('header-streak-count');
   const userInitials = document.getElementById('user-initials');
   const userName = document.getElementById('header-user-name');
   const greetingStudentName = document.getElementById('greeting-student-name');
+  const dropdownUserName = document.getElementById('dropdown-user-name');
+  const dropdownUserEmail = document.getElementById('dropdown-user-email');
 
-  if (streakEl) streakEl.textContent = `${AppState.user.streakDays} Days Unbroken`;
-  if (userInitials) userInitials.textContent = AppState.user.name.slice(0, 2).toUpperCase();
-  if (userName) userName.textContent = AppState.user.name;
-  if (greetingStudentName) greetingStudentName.textContent = AppState.user.name;
+  if (streakEl) streakEl.textContent = `${AppState.user.streakDays || 0} Days Unbroken`;
+  if (userName) userName.textContent = loggedIn ? (AppState.user.name || 'Scholar') : 'Sign In';
+  if (userInitials) {
+    if (loggedIn && AppState.user.name) {
+      userInitials.textContent = AppState.user.name.slice(0, 2).toUpperCase();
+    } else {
+      userInitials.innerHTML = '<span class="material-symbols-outlined text-[14px]">person</span>';
+    }
+  }
+  if (greetingStudentName) greetingStudentName.textContent = loggedIn ? (AppState.user.name || 'Scholar') : 'Scholar';
+  if (dropdownUserName) dropdownUserName.textContent = loggedIn ? (AppState.user.name || 'Scholar') : 'Guest Scholar';
+  if (dropdownUserEmail) dropdownUserEmail.textContent = loggedIn ? (AppState.user.email || 'Connected') : 'Not signed in';
 
   updateWaterUI();
   renderSchedule();
@@ -2619,6 +2684,7 @@ function renderApp() {
 
 // Schedule Event Creation Modal Handlers
 function openAddEventModal() {
+  if (!requireAuth('add events to your schedule')) return;
   const m = document.getElementById('add-event-modal');
   if (m) m.classList.add('open');
   SoundSystem.playPop();
@@ -2890,9 +2956,14 @@ if (typeof window !== 'undefined' && typeof document !== 'undefined' && document
       }
     }, 30000);
 
-    // Route hash check
-    const hash = window.location.hash.replace('#', '') || 'schedule';
-    switchView(hash);
+    // First-time visit & route check:
+    // If not logged in and on the default view, land on the sign-in page to prompt login
+    const rawHash = window.location.hash.replace('#', '');
+    if (!isUserLoggedIn() && (!rawHash || rawHash === 'schedule')) {
+      switchView('login');
+    } else {
+      switchView(rawHash || 'schedule');
+    }
 
     // Tab click listeners
     document.querySelectorAll('.nav-tab-btn, .mobile-nav-item').forEach(btn => {

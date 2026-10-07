@@ -146,33 +146,34 @@
           <span id="cloud-pill-text">Local Mode</span>
         </div>
 
-        <!-- Student Profile Switcher -->
+        <!-- Student Profile Button -->
         <div class="relative group">
-          <button class="user-profile-btn" type="button">
-            <div class="user-avatar-mini" id="user-initials">JV</div>
-            <span class="user-name-label" id="header-user-name">Jishnu</span>
+          <button class="user-profile-btn" id="header-user-profile-btn" onclick="if(!isUserLoggedIn()) switchView('login')" type="button">
+            <div class="user-avatar-mini" id="user-initials">
+              <span class="material-symbols-outlined text-[14px]">person</span>
+            </div>
+            <span class="user-name-label" id="header-user-name">Sign In</span>
             <span class="material-symbols-outlined text-[16px] text-secondary">expand_more</span>
           </button>
           <!-- Profile Dropdown Menu -->
-          <div class="hidden group-hover:block absolute right-0 top-full pt-1.5 z-50 w-52">
+          <div class="hidden group-hover:block absolute right-0 top-full pt-1.5 z-50 w-56">
             <div class="neo-card p-3 rounded-2xl shadow-xl flex flex-col gap-1 text-left bg-surface-container-lowest">
-              <span class="font-label-sm text-secondary uppercase px-2 py-1">Switch Student Profile</span>
-              <button class="w-full text-left p-2 rounded-xl hover:bg-surface-container-low flex items-center gap-2 font-label-md text-on-surface" onclick="switchUserProfile('jishnu')">
-                <span class="w-6 h-6 rounded-full bg-primary text-white text-xs flex items-center justify-center font-bold">JV</span>
-                <span>Jishnu (CS Major)</span>
-              </button>
-              <button class="w-full text-left p-2 rounded-xl hover:bg-surface-container-low flex items-center gap-2 font-label-md text-on-surface" onclick="switchUserProfile('aanya')">
-                <span class="w-6 h-6 rounded-full bg-tertiary text-white text-xs flex items-center justify-center font-bold">AP</span>
-                <span>Aanya (Pre-Med)</span>
-              </button>
+              <div class="px-2 py-1">
+                <p class="font-label-md text-on-surface font-bold truncate" id="dropdown-user-name">Guest Scholar</p>
+                <p class="font-body-sm text-secondary text-xs truncate" id="dropdown-user-email">Not signed in</p>
+              </div>
               <div class="h-[1px] bg-hairline-border my-1"></div>
-              <button class="w-full text-left p-2 rounded-xl hover:bg-surface-container-low flex items-center gap-2 font-label-md text-primary" onclick="switchView('register')">
-                <span class="material-symbols-outlined text-[18px]">person_add</span>
-                <span>Register New Student</span>
+              <button class="w-full text-left p-2 rounded-xl hover:bg-surface-container-low flex items-center gap-2 font-label-md text-primary" onclick="switchView('login')">
+                <span class="material-symbols-outlined text-[18px]">account_circle</span>
+                <span>Student Desk / Sign In</span>
               </button>
-              <button class="w-full text-left p-2 rounded-xl hover:bg-surface-container-low flex items-center gap-2 font-label-md text-secondary" onclick="switchView('login')">
+              <button class="w-full text-left p-2 rounded-xl hover:bg-surface-container-low flex items-center gap-2 font-label-md text-tertiary" onclick="triggerManualCloudSync()">
+                <span class="material-symbols-outlined text-[18px]">sync</span>
+                <span>Sync with Cloud</span>
+              </button>
+              <button class="w-full text-left p-2 rounded-xl hover:bg-surface-container-low flex items-center gap-2 font-label-md text-red-600" onclick="handleUserSignOut()">
                 <span class="material-symbols-outlined text-[18px]">logout</span>
-                <span>Sign Out / Switch</span>
+                <span>Sign Out</span>
               </button>
             </div>
           </div>
@@ -238,16 +239,16 @@
               <span>Today's Rhythm • Campus Week 6</span>
             </div>
             <h1 class="font-headline-lg text-on-surface tracking-wide uppercase">
-              Good morning, <span id="greeting-student-name">Jishnu</span>!
+              Good morning, <span id="greeting-student-name">Scholar</span>!
             </h1>
-            <p class="mt-2 text-on-surface-variant font-body-lg max-w-2xl">
-              Today you have <span class="font-bold text-on-surface">2 lectures</span> and <span class="font-bold text-on-surface">1 chill study block</span>. Remember to drink water and take real breathers!
+            <p class="mt-2 text-on-surface-variant font-body-lg max-w-2xl" id="greeting-summary-text">
+              Plan your gentle routine, drink water, and take real breathers!
             </p>
 
             <!-- Fast Water Sip Affirmation Cloud -->
             <div class="mt-space-md inline-flex items-center gap-2 bg-surface-container-low text-on-surface px-4 py-2 rounded-full font-label-md shadow-sm border border-hairline-border">
               <span class="material-symbols-outlined text-[18px] text-primary" style="font-variation-settings: 'FILL' 1;">water_drop</span>
-              <span id="greeting-water-text">Water goal: 3 of 6 glasses logged today</span>
+              <span id="greeting-water-text">Water goal: 0 of 6 glasses logged today</span>
               <button class="ml-2 underline font-bold text-primary hover:text-primary-container transition-colors" onclick="sipWater()">
                 + Sip 250ml
               </button>
@@ -1117,35 +1118,6 @@
               <span class="material-symbols-outlined text-[18px]">arrow_forward</span>
             </button>
           </form>
-
-          <!-- Instant Demo Quick Selectors -->
-          <div class="pt-3 border-t border-hairline-border flex flex-col gap-2">
-            <div class="flex items-center justify-between">
-              <span class="font-label-sm text-secondary uppercase tracking-wider">Quick Demo Testing</span>
-              <span class="font-label-sm text-tertiary">1-Click Fill</span>
-            </div>
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
-              <button class="bg-surface-container-low hover:bg-surface-container text-left p-3 rounded-2xl flex items-center gap-3 transition-colors border border-hairline-border" onclick="switchUserProfile('jishnu'); switchView('schedule');" type="button">
-                <div class="w-9 h-9 rounded-full bg-secondary-container text-on-secondary-fixed flex items-center justify-center font-label-md flex-shrink-0">
-                  JV
-                </div>
-                <div class="min-w-0">
-                  <p class="font-label-md text-on-surface truncate">Jishnu</p>
-                  <p class="font-body-sm text-secondary truncate">CS Major • 3rd Yr</p>
-                </div>
-              </button>
-
-              <button class="bg-surface-container-low hover:bg-surface-container text-left p-3 rounded-2xl flex items-center gap-3 transition-colors border border-hairline-border" onclick="switchUserProfile('aanya'); switchView('schedule');" type="button">
-                <div class="w-9 h-9 rounded-full bg-secondary-container text-on-secondary-fixed flex items-center justify-center font-label-md flex-shrink-0">
-                  AP
-                </div>
-                <div class="min-w-0">
-                  <p class="font-label-md text-on-surface truncate">Aanya</p>
-                  <p class="font-body-sm text-secondary truncate">Pre-Med • 2nd Yr</p>
-                </div>
-              </button>
-            </div>
-          </div>
         </div>
 
         <!-- Barnaby's Zero Guilt Guarantee Card -->
