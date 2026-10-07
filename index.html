@@ -715,12 +715,15 @@
 
           <!-- Sprint Settings & Preset Selectors -->
           <div class="relative z-10 w-full bg-surface-container-low rounded-2xl p-space-md mb-space-md border border-hairline-border flex flex-col gap-space-sm text-left">
-            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-1 pb-2 border-b border-hairline-border">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-2 border-b border-hairline-border">
               <div class="flex items-center gap-2">
                 <span class="material-symbols-outlined text-[18px] text-primary">timer</span>
                 <span class="font-label-lg text-on-surface font-bold">Sprint Pace Settings</span>
               </div>
-              <span class="font-label-sm text-on-surface-variant">Pick your pace: Start now or queue</span>
+              <button class="notification-status-badge pill-badge pill-badge-yellow text-xs font-bold cursor-pointer" onclick="NotificationSystem.requestPermission()" type="button" title="Enable browser bell alarms when timers finish">
+                <span class="material-symbols-outlined text-[14px]">notifications</span>
+                <span>Enable Alarms</span>
+              </button>
             </div>
 
             <!-- Duration Buttons -->
@@ -1152,6 +1155,35 @@
             <p class="font-body-sm text-secondary mt-0.5">
               No red alarms, no late-night panic notifications, and automatic sleep protection past 10:30 PM.
             </p>
+          </div>
+        </div>
+
+        <!-- Local Data Sanctuary & Backup Card -->
+        <div class="w-full neo-card p-5 mt-space-md flex flex-col gap-3 bg-surface-container-low border border-hairline-border">
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+            <div class="flex items-center gap-2">
+              <span class="material-symbols-outlined text-[20px] text-primary">database</span>
+              <span class="font-headline-sm text-on-surface uppercase font-bold">Data Sanctuary & Backups</span>
+            </div>
+            <span class="pill-badge pill-badge-blue text-xs font-bold">100% Private In Your Browser</span>
+          </div>
+          <p class="font-body-sm text-on-surface-variant">
+            All your homework goals, custom checklist steps, daily schedule, and study streak minutes are automatically saved on this device.
+          </p>
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-2 pt-1">
+            <button class="btn-pill btn-soft text-xs flex items-center justify-center gap-1.5 font-bold" onclick="exportUserData()" type="button" title="Download a JSON copy of all your study data">
+              <span class="material-symbols-outlined text-[16px]">download</span>
+              <span>Export Data (JSON)</span>
+            </button>
+            <label class="btn-pill btn-soft text-xs flex items-center justify-center gap-1.5 font-bold cursor-pointer" title="Restore study room from JSON backup">
+              <span class="material-symbols-outlined text-[16px]">upload_file</span>
+              <span>Import Data (JSON)</span>
+              <input type="file" accept=".json" class="hidden" onchange="importUserData(this)"/>
+            </label>
+            <button class="btn-pill btn-outline text-xs flex items-center justify-center gap-1.5 font-bold text-red-600 hover:bg-red-50 border-red-200" onclick="resetToDefaultState()" type="button" title="Reset all data back to fresh demo start">
+              <span class="material-symbols-outlined text-[16px]">restart_alt</span>
+              <span>Reset to Defaults</span>
+            </button>
           </div>
         </div>
 

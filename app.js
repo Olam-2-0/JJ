@@ -324,14 +324,15 @@ const PomiDialogues = {
   ]
 };
 
-// Helper: Local Storage Sync
+// Helper: Local Storage Sync & Full State Persistence
 function loadSavedState() {
   try {
+    if (typeof localStorage === 'undefined') return;
     const saved = localStorage.getItem('adaptive_student_assistant_state');
     if (saved) {
       const parsed = JSON.parse(saved);
-      if (parsed.user) AppState.user = parsed.user;
-      if (parsed.schedule) AppState.schedule = parsed.schedule;
+      if (parsed.user) AppState.user = Object.assign(AppState.user, parsed.user);
+      if (parsed.schedule && Array.isArray(parsed.schedule)) AppState.schedule = parsed.schedule;
       if (parsed.assignments && Array.isArray(parsed.assignments)) {
         AppState.assignments = parsed.assignments.map((asg, idx) => {
           if (!asg.dueTimestamp) {
@@ -341,7 +342,9 @@ function loadSavedState() {
         });
       }
       if (parsed.timetable) AppState.timetable = parsed.timetable;
-      if (parsed.stickers) AppState.stickers = parsed.stickers;
+      if (parsed.stickers && Array.isArray(parsed.stickers)) AppState.stickers = parsed.stickers;
+      if (parsed.analytics) AppState.analytics = Object.assign(AppState.analytics, parsed.analytics);
+      if (parsed.selectedAssignmentId) AppState.selectedAssignmentId = parsed.selectedAssignmentId;
     }
   } catch (e) {
     console.warn('Could not load localStorage state:', e);
@@ -350,14 +353,136 @@ function loadSavedState() {
 
 function persistState() {
   try {
+    if (typeof localStorage === 'undefined') return;
     localStorage.setItem('adaptive_student_assistant_state', JSON.stringify({
       user: AppState.user,
       schedule: AppState.schedule,
       assignments: AppState.assignments,
       timetable: AppState.timetable,
-      stickers: AppState.stickers
+      stickers: AppState.stickers,
+      analytics: AppState.analytics,
+      selectedAssignmentId: AppState.selectedAssignmentId
     }));
-  } catch (e) {}
+  } catch (e) {
+    console.warn('Could not persist localStorage state:', e);
+  }
+}
+
+// Browser Desktop Alarms & Notification Engine
+const NotificationSystem = {
+  isSupported() {
+    return typeof window !== 'undefined' && 'Notification' in window;
+  },
+  getPermission() {
+    if (!this.isSupported()) return 'unsupported';
+    return Notification.permission;
+  },
+  async requestPermission() {
+    if (!this.isSupported()) {
+      showToast('Notifications are not supported in this browser.', 'warning');
+      return false;
+    }
+    try {
+      const perm = await Notification.requestPermission();
+      this.updateUI();
+      if (perm === 'granted') {
+        SoundSystem.playSuccessChime();
+        showToast('🔔 Desktop notifications active! You will get alarms on session finish.', 'notifications_active');
+        return true;
+      } else {
+        showToast('Desktop notifications were not enabled.', 'notifications_off');
+        return false;
+      }
+    } catch (e) {
+      console.warn('Could not request notification permission:', e);
+      return false;
+    }
+  },
+  send(title, body, icon = 'assets/pomi.jpg') {
+    if (!this.isSupported()) return;
+    if (Notification.permission === 'granted') {
+      try {
+        const notif = new Notification(title, {
+          body: body,
+          icon: icon,
+          badge: icon
+        });
+        notif.onclick = () => {
+          window.focus();
+          notif.close();
+        };
+      } catch (e) {
+        console.warn('Could not display desktop notification:', e);
+      }
+    }
+  },
+  updateUI() {
+    const perm = this.getPermission();
+    document.querySelectorAll('.notification-status-badge').forEach(el => {
+      if (perm === 'granted') {
+        el.className = 'notification-status-badge pill-badge pill-badge-blue text-xs font-bold cursor-pointer';
+        el.innerHTML = '<span class="material-symbols-outlined text-[14px]">notifications_active</span> Alarms Active';
+      } else if (perm === 'denied') {
+        el.className = 'notification-status-badge pill-badge pill-badge-coral text-xs font-bold cursor-pointer';
+        el.innerHTML = '<span class="material-symbols-outlined text-[14px]">notifications_off</span> Alarms Blocked';
+      } else {
+        el.className = 'notification-status-badge pill-badge pill-badge-yellow text-xs font-bold cursor-pointer';
+        el.innerHTML = '<span class="material-symbols-outlined text-[14px]">notifications</span> Enable Alarms';
+      }
+    });
+  }
+};
+
+// Data Sanctuary: Export, Import, and Reset Tools
+function exportUserData() {
+  try {
+    const dataStr = 'data:text/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(AppState, null, 2));
+    const a = document.createElement('a');
+    a.setAttribute('href', dataStr);
+    a.setAttribute('download', `seon_study_room_backup_${new Date().toISOString().slice(0, 10)}.json`);
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    SoundSystem.playSuccessChime();
+    showToast('📁 Study data exported as JSON backup!', 'file_download');
+  } catch (e) {
+    showToast('Failed to export study data.', 'error');
+  }
+}
+
+function importUserData(inputElement) {
+  if (!inputElement || !inputElement.files || !inputElement.files[0]) return;
+  const file = inputElement.files[0];
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    try {
+      const imported = JSON.parse(e.target.result);
+      if (imported.assignments && Array.isArray(imported.assignments)) AppState.assignments = imported.assignments;
+      if (imported.schedule && Array.isArray(imported.schedule)) AppState.schedule = imported.schedule;
+      if (imported.user) AppState.user = Object.assign(AppState.user, imported.user);
+      if (imported.stickers && Array.isArray(imported.stickers)) AppState.stickers = imported.stickers;
+      if (imported.timetable) AppState.timetable = imported.timetable;
+      if (imported.analytics) AppState.analytics = Object.assign(AppState.analytics, imported.analytics);
+      if (imported.selectedAssignmentId) AppState.selectedAssignmentId = imported.selectedAssignmentId;
+      persistState();
+      renderApp();
+      triggerConfetti();
+      SoundSystem.playFanfare();
+      showToast('🎉 Study room data restored from backup!', 'cloud_done');
+    } catch (err) {
+      showToast('Invalid backup JSON file.', 'error');
+    }
+  };
+  reader.readAsText(file);
+}
+
+function resetToDefaultState() {
+  if (confirm('Are you sure you want to reset Seon Study Room to demo defaults? All your custom homework, schedule, and study minutes will be refreshed.')) {
+    try {
+      localStorage.removeItem('adaptive_student_assistant_state');
+    } catch (e) {}
+    location.reload();
+  }
 }
 
 // Toast System
@@ -1021,14 +1146,22 @@ function renderAssignments(filterStatus = 'all') {
       </div>
 
       <!-- Big Prominent Action Buttons -->
-      <div class="pt-space-sm flex flex-col sm:flex-row items-center gap-space-sm">
-        <button class="btn-pill btn-primary btn-lg flex-1 w-full flex items-center justify-center gap-2 text-base font-bold shadow-md hover:scale-[1.01] transition-transform" onclick="triggerStartHomeworkFocus('${selectedAsg.id}')" type="button">
+      <div class="pt-space-sm flex flex-col sm:flex-row items-center gap-space-sm flex-wrap">
+        <button class="btn-pill btn-primary btn-lg flex-1 min-w-[200px] w-full flex items-center justify-center gap-2 text-base font-bold shadow-md hover:scale-[1.01] transition-transform" onclick="triggerStartHomeworkFocus('${selectedAsg.id}')" type="button">
           <span class="material-symbols-outlined text-[24px]">play_circle</span>
           <span>Start ${duration}m Focus Block</span>
+        </button>
+        <button class="btn-pill ${selectedAsg.status === 'completed' ? 'btn-soft' : 'btn-outline text-emerald-700 hover:bg-emerald-50'} w-full sm:w-auto flex items-center justify-center gap-1 font-bold" onclick="toggleAssignmentCompleted('${selectedAsg.id}')" type="button">
+          <span class="material-symbols-outlined text-[18px]">${selectedAsg.status === 'completed' ? 'restart_alt' : 'check_circle'}</span>
+          <span>${selectedAsg.status === 'completed' ? 'Mark In Progress' : 'Mark Complete'}</span>
         </button>
         <button class="btn-pill btn-soft w-full sm:w-auto flex items-center justify-center gap-1" onclick="postponeAssignment('${selectedAsg.id}')" type="button">
           <span class="material-symbols-outlined text-[18px]">bedtime</span>
           <span>Postpone (+24h)</span>
+        </button>
+        <button class="btn-pill btn-outline text-red-600 hover:bg-red-50 w-full sm:w-auto flex items-center justify-center gap-1" onclick="deleteAssignment('${selectedAsg.id}')" type="button" title="Delete this homework">
+          <span class="material-symbols-outlined text-[18px]">delete</span>
+          <span>Delete</span>
         </button>
       </div>
     `;
@@ -1084,13 +1217,18 @@ function renderAssignments(filterStatus = 'all') {
         <div class="flex items-center justify-between pt-1 border-t border-hairline-border">
           <div class="flex items-center gap-1 text-xs text-on-surface-variant font-bold">
             <span class="material-symbols-outlined text-[15px] ${doneSteps > 0 && doneSteps === totalSteps ? 'text-primary' : 'text-secondary'}">checklist</span>
-            <span>${totalSteps > 0 ? `${doneSteps}/${totalSteps} Steps Done` : 'Freeform'}</span>
+            <span>${totalSteps > 0 ? `${doneSteps}/${totalSteps} Steps Done` : (asg.status === 'completed' ? 'Completed' : 'Ready')}</span>
           </div>
 
-          <button class="btn-pill ${isSelected ? 'btn-primary' : 'btn-soft'} btn-sm text-xs flex items-center gap-1" onclick="event.stopPropagation(); triggerStartHomeworkFocus('${asg.id}')" type="button">
-            <span class="material-symbols-outlined text-[15px]">play_arrow</span>
-            <span>Focus (${duration}m)</span>
-          </button>
+          <div class="flex items-center gap-1">
+            <button class="btn-pill ${isSelected ? 'btn-primary' : 'btn-soft'} btn-sm text-xs flex items-center gap-1" onclick="event.stopPropagation(); triggerStartHomeworkFocus('${asg.id}')" type="button">
+              <span class="material-symbols-outlined text-[15px]">play_arrow</span>
+              <span>Focus (${duration}m)</span>
+            </button>
+            <button class="p-1 rounded-full text-secondary hover:text-red-600 hover:bg-red-50 transition-colors" onclick="event.stopPropagation(); deleteAssignment('${asg.id}')" type="button" title="Delete homework">
+              <span class="material-symbols-outlined text-[16px]">delete</span>
+            </button>
+          </div>
         </div>
       `;
       container.appendChild(card);
@@ -1163,6 +1301,42 @@ function toggleAssignmentStep(assignmentId, stepId) {
   renderAssignments();
   renderMyDayPendingHomeworks();
   syncFocusTimerChecklist();
+}
+
+function toggleAssignmentCompleted(assignmentId) {
+  const asg = AppState.assignments.find(a => a.id === assignmentId);
+  if (!asg) return;
+  if (asg.status === 'completed') {
+    asg.status = 'todo';
+    if (asg.steps) asg.steps.forEach(s => s.done = false);
+    SoundSystem.playPop();
+    showToast(`Marked "${asg.title}" as to-do`, 'undo');
+  } else {
+    asg.status = 'completed';
+    if (asg.steps) asg.steps.forEach(s => s.done = true);
+    triggerConfetti();
+    SoundSystem.playSuccessChime();
+    AppState.user.coins += 25;
+    showToast(`🎉 "${asg.title}" completed! +25 Coins earned!`, 'check_circle');
+  }
+  persistState();
+  renderAssignments();
+  renderMyDayPendingHomeworks();
+}
+
+function deleteAssignment(assignmentId) {
+  const idx = AppState.assignments.findIndex(a => a.id === assignmentId);
+  if (idx !== -1) {
+    const deleted = AppState.assignments.splice(idx, 1)[0];
+    if (AppState.selectedAssignmentId === assignmentId) {
+      AppState.selectedAssignmentId = AppState.assignments.length > 0 ? AppState.assignments[0].id : null;
+    }
+    persistState();
+    renderAssignments();
+    renderMyDayPendingHomeworks();
+    SoundSystem.playPop(300);
+    showToast(`Deleted "${deleted.title}"`, 'delete');
+  }
 }
 
 function postponeAssignment(id) {
@@ -1575,6 +1749,12 @@ function timerTick() {
       AppState.user.coins += 25;
       AppState.analytics.totalMilestoneSwagsEarned++;
       persistState();
+
+      // Trigger desktop notification for milestone
+      NotificationSystem.send(
+        `⏱️ ${minutesElapsed}-Minute Focus Milestone!`,
+        `Amazing momentum! You unlocked a new study milestone swag and +25 coins.`
+      );
     }
 
   } else {
@@ -1592,11 +1772,18 @@ function timerTick() {
     awardFocusSticker('victory');
 
     const currentAsg = AppState.assignments.find(a => a.id === AppState.timer.activeAssignmentId);
+    const hwTitle = currentAsg ? currentAsg.title : 'Study Goal';
     const pomiText = document.getElementById('pomi-speech-text');
     if (pomiText) {
       pomiText.textContent = `VICTORY! You conquered the full ${AppState.timer.durationMinutes}m focus block for ${currentAsg ? currentAsg.title : 'your study goal'}! Stand up and celebrate!`;
     }
     showToast(`🏆 Focus Block Finished! Victory Swag +50 Coins earned!`, 'celebration');
+
+    // Trigger desktop notification for session completion
+    NotificationSystem.send(
+      `🏆 Focus Block Finished!`,
+      `Great job! You conquered the full ${AppState.timer.durationMinutes}m focus block for "${hwTitle}"! Take a well-deserved break.`
+    );
 
     const pauseBtn = document.getElementById('timer-pause-btn');
     if (pauseBtn) {
@@ -1773,6 +1960,11 @@ function logFocusTimeToAnalytics(seconds) {
   // Periodic visual refresh if analytics is visible
   if (AppState.analytics.totalSecondsLogged % 10 === 0) {
     renderFocusAnalytics(AppState.analytics.activeTab);
+  }
+
+  // Periodic state persistence every 30 seconds of active study
+  if (AppState.analytics.totalSecondsLogged % 30 === 0) {
+    persistState();
   }
 }
 
@@ -2479,6 +2671,93 @@ function renderApp() {
   syncFocusTimerChecklist();
   updateTimerDisplay();
   renderFocusAnalytics(AppState.analytics.activeTab);
+  NotificationSystem.updateUI();
+}
+
+// Schedule Event Creation Modal Handlers
+function openAddEventModal() {
+  const m = document.getElementById('add-event-modal');
+  if (m) m.classList.add('open');
+  SoundSystem.playPop();
+}
+
+function closeAddEventModal() {
+  const m = document.getElementById('add-event-modal');
+  if (m) m.classList.remove('open');
+}
+
+function handleAddEventSubmit(e) {
+  if (e && e.preventDefault) e.preventDefault();
+  const title = document.getElementById('evt-title')?.value.trim();
+  const timeRange = document.getElementById('evt-time')?.value.trim();
+  const location = document.getElementById('evt-location')?.value.trim() || 'Campus';
+  const category = document.getElementById('evt-category')?.value || 'class';
+
+  if (!title || !timeRange) return;
+
+  AppState.schedule.push({
+    id: 'sch-' + Date.now(),
+    title: title,
+    category: category,
+    timeRange: timeRange,
+    location: location,
+    description: `Scheduled ${category} session.`,
+    completed: false,
+    icon: category === 'class' ? 'school' : category === 'focus' ? 'bolt' : 'local_cafe'
+  });
+
+  persistState();
+  renderSchedule();
+  closeAddEventModal();
+  const form = document.getElementById('add-event-form');
+  if (form) form.reset();
+  SoundSystem.playSuccessChime();
+  showToast(`Added "${title}" to your rhythm!`, 'calendar_today');
+}
+
+// Student Login & Registration Handlers
+function simulateLogin(type = 'Email Login') {
+  const submitBtn = document.getElementById('login-submit-btn');
+  if (submitBtn) {
+    submitBtn.innerHTML = `<span class="material-symbols-outlined text-[18px] animate-spin">refresh</span><span>Warming up your desk...</span>`;
+  }
+  setTimeout(() => {
+    if (submitBtn) {
+      submitBtn.innerHTML = `<span class="material-symbols-outlined text-[18px]">check_circle</span><span>Desk Ready! Entering...</span>`;
+    }
+    setTimeout(() => {
+      switchView('schedule');
+      showToast(`Welcome back! Logged in via ${type}.`, 'waving_hand');
+      SoundSystem.playSuccessChime();
+      if (submitBtn) {
+        submitBtn.innerHTML = `<span>Open My Desk</span><span class="material-symbols-outlined text-[18px]">arrow_forward</span>`;
+      }
+    }, 400);
+  }, 700);
+}
+
+function handleRegisterSubmit(e, isSso = false) {
+  if (e && e.preventDefault) e.preventDefault();
+  const name = isSso ? 'New Campus Scholar' : (document.getElementById('reg-name')?.value || 'Student');
+  const email = isSso ? 'scholar@campus.edu' : (document.getElementById('reg-email')?.value || 'scholar@campus.edu');
+  const major = document.getElementById('reg-major')?.value || 'Computer Science';
+  const year = document.getElementById('reg-year')?.value || '3rd Year';
+
+  AppState.user.name = name;
+  AppState.user.email = email;
+  AppState.user.major = major;
+  AppState.user.year = year;
+  AppState.user.streakDays = 1;
+  persistState();
+  renderApp();
+
+  triggerConfetti();
+  SoundSystem.playSuccessChime();
+  showToast(`Account created for ${name}! Welcome to your sanctuary.`, 'celebration');
+
+  setTimeout(() => {
+    switchView('schedule');
+  }, 600);
 }
 
 // Window Event Listeners (Client-side execution only)
