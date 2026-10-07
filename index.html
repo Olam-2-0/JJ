@@ -140,6 +140,12 @@
           <span class="text-[11px] underline ml-0.5 font-bold">+Sip</span>
         </div>
 
+        <!-- Cloud Sync Status Pill -->
+        <div class="status-pill cursor-pointer" id="header-cloud-pill" onclick="switchView('login')" title="Cloud Sync Status: Click to manage cloud connection">
+          <span class="material-symbols-outlined text-[16px] text-secondary" id="cloud-pill-icon">cloud_off</span>
+          <span id="cloud-pill-text">Local Mode</span>
+        </div>
+
         <!-- Student Profile Switcher -->
         <div class="relative group">
           <button class="user-profile-btn" type="button">
@@ -1084,7 +1090,7 @@
           </div>
 
           <!-- Form Fields -->
-          <form class="flex flex-col gap-4" onsubmit="event.preventDefault(); simulateLogin('Email Login');">
+          <form class="flex flex-col gap-4" onsubmit="handleSignInSubmit(event)">
             <div>
               <label class="form-label" for="login-email">
                 <span>Student Email / Campus ID</span>
@@ -1155,6 +1161,39 @@
             <p class="font-body-sm text-secondary mt-0.5">
               No red alarms, no late-night panic notifications, and automatic sleep protection past 10:30 PM.
             </p>
+          </div>
+        </div>
+
+        <!-- Cloud Sanctuary & Supabase Integration Panel -->
+        <div class="w-full neo-card p-6 mt-space-md flex flex-col gap-4 bg-surface-container border border-hairline-border">
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+            <div class="flex items-center gap-2.5">
+              <span class="material-symbols-outlined text-[24px] text-tertiary">cloud_sync</span>
+              <div>
+                <h3 class="font-headline-sm text-on-surface uppercase font-bold leading-none">Cloud Sanctuary (Supabase)</h3>
+                <p class="font-body-sm text-secondary text-xs mt-0.5">Real PostgreSQL Database & Multi-Device Sync</p>
+              </div>
+            </div>
+            <span id="desk-cloud-status-badge" class="pill-badge pill-badge-gray text-xs font-bold">💾 Offline / Local Storage Mode</span>
+          </div>
+
+          <p class="font-body-sm text-on-surface-variant">
+            Connect your free Supabase project to unlock real email authentication, automatic cloud backups, cross-device sync between your laptop & phone, and the live global study leaderboard.
+          </p>
+
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-2 pt-1">
+            <button class="btn-pill btn-primary text-xs flex items-center justify-center gap-1.5 font-bold" onclick="openSupabaseModal()" type="button">
+              <span class="material-symbols-outlined text-[16px]">settings_ethernet</span>
+              <span>Configure Supabase</span>
+            </button>
+            <button class="btn-pill btn-soft text-xs flex items-center justify-center gap-1.5 font-bold" onclick="triggerManualCloudSync()" type="button">
+              <span class="material-symbols-outlined text-[16px]">sync</span>
+              <span>Sync Now</span>
+            </button>
+            <button class="btn-pill btn-soft text-xs flex items-center justify-center gap-1.5 font-bold" onclick="showSQLSchemaModal()" type="button">
+              <span class="material-symbols-outlined text-[16px]">data_object</span>
+              <span>View SQL Schema</span>
+            </button>
           </div>
         </div>
 
@@ -1283,6 +1322,12 @@
                   <option value="Graduate">Graduate / Master's</option>
                 </select>
               </div>
+            </div>
+
+            <div>
+              <label class="form-label" for="reg-password">Secret Passcode</label>
+              <input class="form-input" id="reg-password" placeholder="At least 6 characters" required type="password" minlength="6" value="studyharder2025"/>
+              <p class="font-body-sm text-secondary text-xs mt-1">Secures your account for cross-device sign-in.</p>
             </div>
 
             <div>
@@ -1821,6 +1866,84 @@
     </div>
   </div>
 
+  <!-- Supabase Cloud Connection Modal -->
+  <div class="modal-backdrop" id="supabase-config-modal">
+    <div class="modal-content max-w-lg">
+      <button class="modal-close-btn" onclick="closeSupabaseModal()" type="button">
+        <span class="material-symbols-outlined text-[20px]">close</span>
+      </button>
+
+      <div class="flex items-center gap-3 mb-4">
+        <div class="w-10 h-10 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center shrink-0">
+          <span class="material-symbols-outlined text-[22px]">cloud</span>
+        </div>
+        <div>
+          <h3 class="font-headline-md text-on-surface">SUPABASE CLOUD SANCTUARY</h3>
+          <p class="font-body-sm text-on-surface-variant">Connect your free Supabase PostgreSQL database.</p>
+        </div>
+      </div>
+
+      <form class="flex flex-col gap-4" onsubmit="handleSaveSupabaseConfig(event)">
+        <div>
+          <label class="form-label font-bold" for="sb-url">Supabase Project URL</label>
+          <input class="form-input" id="sb-url" placeholder="https://your-project.supabase.co" required type="url"/>
+          <p class="font-body-sm text-secondary text-xs mt-1">Found in Supabase Dashboard -&gt; Project Settings -&gt; API</p>
+        </div>
+
+        <div>
+          <label class="form-label font-bold" for="sb-key">Anon / Public API Key</label>
+          <input class="form-input font-mono text-xs" id="sb-key" placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..." required type="password"/>
+          <p class="font-body-sm text-secondary text-xs mt-1">Found in Supabase Dashboard -&gt; Project Settings -&gt; API (anon public)</p>
+        </div>
+
+        <div class="p-3 bg-surface-container-low rounded-xl text-body-sm text-on-surface-variant border border-hairline-border flex items-center gap-2">
+          <span class="material-symbols-outlined text-primary text-[18px]">security</span>
+          <span class="text-xs">Your keys are saved safely in your own browser's storage and never exposed.</span>
+        </div>
+
+        <div class="flex items-center gap-3 pt-2">
+          <button class="btn-pill btn-soft flex-1" onclick="closeSupabaseModal()" type="button">Cancel</button>
+          <button class="btn-pill btn-primary flex-1" id="sb-save-btn" type="submit">Test &amp; Connect</button>
+        </div>
+
+        <div class="pt-2 border-t border-hairline-border flex items-center justify-between">
+          <button class="text-xs text-secondary hover:text-primary underline" onclick="showSQLSchemaModal()" type="button">View Required SQL Schema</button>
+          <button class="text-xs text-red-600 hover:underline" onclick="handleDisconnectSupabase()" type="button">Disconnect Cloud</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Supabase SQL Migration Script Modal -->
+  <div class="modal-backdrop" id="supabase-sql-modal">
+    <div class="modal-content max-w-xl max-h-[85vh] flex flex-col">
+      <div class="flex items-center justify-between pb-3 border-b border-hairline-border">
+        <div class="flex items-center gap-2">
+          <span class="material-symbols-outlined text-primary text-[22px]">terminal</span>
+          <h3 class="font-headline-sm text-on-surface uppercase font-bold">Supabase SQL Schema</h3>
+        </div>
+        <button class="modal-close-btn relative top-0 right-0" onclick="closeSQLSchemaModal()" type="button">
+          <span class="material-symbols-outlined text-[20px]">close</span>
+        </button>
+      </div>
+
+      <p class="font-body-sm text-on-surface-variant my-2 text-xs">
+        Copy this script, open your <strong>Supabase Dashboard &gt; SQL Editor &gt; New Query</strong>, paste and click <strong>Run</strong>.
+      </p>
+
+      <div class="relative flex-1 overflow-hidden my-2 border border-hairline-border rounded-xl">
+        <pre class="w-full h-64 overflow-auto p-3 text-xs bg-surface-container-lowest font-mono select-all text-on-surface" id="sql-schema-pre"></pre>
+      </div>
+
+      <div class="flex items-center gap-3 pt-2">
+        <button class="btn-pill btn-soft flex-1" onclick="closeSQLSchemaModal()" type="button">Close</button>
+        <button class="btn-pill btn-primary flex-1 flex items-center justify-center gap-1.5" onclick="copySQLSchema()" type="button">
+          <span class="material-symbols-outlined text-[16px]">content_copy</span>
+          <span>Copy SQL to Clipboard</span>
+        </button>
+      </div>
+    </div>
+  </div>
 
   <!-- Confetti Canvas -->
   <canvas id="confetti-canvas" class="fixed inset-0 pointer-events-none z-50 hidden"></canvas>
@@ -1829,6 +1952,8 @@
   <div id="toast-container"></div>
 
   <!-- Scripts -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="cloud.js"></script>
   <script src="audio.js"></script>
   <script src="app.js"></script>
   <script>

@@ -874,6 +874,9 @@ function deleteScheduleItem(id) {
   if (idx !== -1) {
     const deleted = AppState.schedule.splice(idx, 1)[0];
     persistState();
+    if (typeof CloudEngine !== 'undefined' && CloudEngine.isConfigured()) {
+      CloudEngine.pushToCloud();
+    }
     renderSchedule();
     SoundSystem.playPop(300);
     showToast(`Deleted "${deleted.title}" from your schedule.`, 'delete');
@@ -891,6 +894,9 @@ function toggleScheduleItem(id) {
       SoundSystem.playPop();
     }
     persistState();
+    if (typeof CloudEngine !== 'undefined' && CloudEngine.isConfigured()) {
+      CloudEngine.pushToCloud();
+    }
     renderSchedule();
   }
 }
@@ -1320,6 +1326,9 @@ function toggleAssignmentCompleted(assignmentId) {
     showToast(`🎉 "${asg.title}" completed! +25 Coins earned!`, 'check_circle');
   }
   persistState();
+  if (typeof CloudEngine !== 'undefined' && CloudEngine.isConfigured()) {
+    CloudEngine.pushToCloud();
+  }
   renderAssignments();
   renderMyDayPendingHomeworks();
 }
@@ -1332,6 +1341,9 @@ function deleteAssignment(assignmentId) {
       AppState.selectedAssignmentId = AppState.assignments.length > 0 ? AppState.assignments[0].id : null;
     }
     persistState();
+    if (typeof CloudEngine !== 'undefined' && CloudEngine.isConfigured()) {
+      CloudEngine.pushToCloud();
+    }
     renderAssignments();
     renderMyDayPendingHomeworks();
     SoundSystem.playPop(300);
@@ -1345,6 +1357,9 @@ function postponeAssignment(id) {
     asg.dueTimestamp = Date.now() + 24 * 3600 * 1000;
     asg.dueText = 'Postponed +24h';
     persistState();
+    if (typeof CloudEngine !== 'undefined' && CloudEngine.isConfigured()) {
+      CloudEngine.pushToCloud();
+    }
     renderAssignments();
     renderMyDayPendingHomeworks();
     SoundSystem.playGentleBell();
@@ -1488,6 +1503,9 @@ function handleAddHomeworkSubmit(e) {
   AppState.assignments.push(newAssignment);
   AppState.selectedAssignmentId = newAssignment.id; // Automatically select this new homework!
   persistState();
+  if (typeof CloudEngine !== 'undefined' && CloudEngine.isConfigured()) {
+    CloudEngine.pushToCloud();
+  }
   renderAssignments();
   renderMyDayPendingHomeworks();
   closeAddHomeworkModal();
@@ -1778,6 +1796,10 @@ function timerTick() {
       pomiText.textContent = `VICTORY! You conquered the full ${AppState.timer.durationMinutes}m focus block for ${currentAsg ? currentAsg.title : 'your study goal'}! Stand up and celebrate!`;
     }
     showToast(`🏆 Focus Block Finished! Victory Swag +50 Coins earned!`, 'celebration');
+
+    if (typeof CloudEngine !== 'undefined' && CloudEngine.isConfigured()) {
+      CloudEngine.logFocusSession(AppState.timer.durationMinutes, currentAsg ? (currentAsg.course || currentAsg.title) : 'General Studies', 1);
+    }
 
     // Trigger desktop notification for session completion
     NotificationSystem.send(
@@ -2595,7 +2617,22 @@ function renderLeaderboard(tab = AppState.leaderboard.activeTab) {
 
   if (!tbody) return;
 
+  // If live CloudEngine is configured and tab is global, check for live community rankings
+  if (tab === 'global' && typeof CloudEngine !== 'undefined' && CloudEngine.isConfigured()) {
+    CloudEngine.fetchLiveLeaderboard().then(liveData => {
+      if (liveData && liveData.length > 0) {
+        AppState.leaderboard.global = liveData;
+        renderLeaderboardRows(liveData, tbody);
+      }
+    });
+  }
+
   const data = AppState.leaderboard[tab] || AppState.leaderboard.global;
+  renderLeaderboardRows(data, tbody);
+}
+
+function renderLeaderboardRows(data, tbody) {
+  if (!tbody) return;
   tbody.innerHTML = data.map(item => {
     let rankClass = 'rank-other';
     if (item.rank === 1) rankClass = 'rank-1';
@@ -2707,6 +2744,9 @@ function handleAddEventSubmit(e) {
   });
 
   persistState();
+  if (typeof CloudEngine !== 'undefined' && CloudEngine.isConfigured()) {
+    CloudEngine.pushToCloud();
+  }
   renderSchedule();
   closeAddEventModal();
   const form = document.getElementById('add-event-form');
@@ -2716,6 +2756,34 @@ function handleAddEventSubmit(e) {
 }
 
 // Student Login & Registration Handlers
+async function handleSignInSubmit(e) {
+  if (e && e.preventDefault) e.preventDefault();
+  const email = document.getElementById('login-email')?.value.trim();
+  const password = document.getElementById('login-password')?.value;
+  const submitBtn = document.getElementById('login-submit-btn');
+
+  if (typeof CloudEngine !== 'undefined' && CloudEngine.isConfigured()) {
+    if (submitBtn) {
+      submitBtn.innerHTML = `<span class="material-symbols-outlined text-[18px] animate-spin">refresh</span><span>Connecting to Cloud...</span>`;
+    }
+    try {
+      await CloudEngine.signIn(email, password);
+      SoundSystem.playFanfare();
+      showToast('☁️ Signed in successfully! Cloud sanctuary active.', 'cloud_done');
+      switchView('schedule');
+    } catch (err) {
+      showToast(`Sign in: ${err.message || 'Check email & password'}`, 'error');
+    } finally {
+      if (submitBtn) {
+        submitBtn.innerHTML = `<span>Open My Desk</span><span class="material-symbols-outlined text-[18px]">arrow_forward</span>`;
+      }
+    }
+  } else {
+    // Offline / Demo mode
+    simulateLogin('Email Login');
+  }
+}
+
 function simulateLogin(type = 'Email Login') {
   const submitBtn = document.getElementById('login-submit-btn');
   if (submitBtn) {
@@ -2736,13 +2804,29 @@ function simulateLogin(type = 'Email Login') {
   }, 700);
 }
 
-function handleRegisterSubmit(e, isSso = false) {
+async function handleRegisterSubmit(e, isSso = false) {
   if (e && e.preventDefault) e.preventDefault();
   const name = isSso ? 'New Campus Scholar' : (document.getElementById('reg-name')?.value || 'Student');
   const email = isSso ? 'scholar@campus.edu' : (document.getElementById('reg-email')?.value || 'scholar@campus.edu');
   const major = document.getElementById('reg-major')?.value || 'Computer Science';
   const year = document.getElementById('reg-year')?.value || '3rd Year';
+  const password = document.getElementById('reg-password')?.value || 'studyharder2025';
 
+  if (typeof CloudEngine !== 'undefined' && CloudEngine.isConfigured() && !isSso) {
+    try {
+      showToast('Creating cloud account in Supabase...', 'cloud_upload');
+      await CloudEngine.signUp(email, password, name, major, year);
+      triggerConfetti();
+      SoundSystem.playFanfare();
+      showToast(`🎉 Cloud account created for ${name}!`, 'celebration');
+      setTimeout(() => switchView('schedule'), 800);
+      return;
+    } catch (err) {
+      showToast(`Cloud registration: ${err.message}`, 'error');
+    }
+  }
+
+  // Local fallback
   AppState.user.name = name;
   AppState.user.email = email;
   AppState.user.major = major;
@@ -2760,12 +2844,113 @@ function handleRegisterSubmit(e, isSso = false) {
   }, 600);
 }
 
+// Cloud Sanctuary & Supabase UI Modal Helpers
+function openSupabaseModal() {
+  const m = document.getElementById('supabase-config-modal');
+  if (!m) return;
+  if (typeof CloudEngine !== 'undefined') {
+    const { url, key } = CloudEngine.getStoredCredentials();
+    const urlInput = document.getElementById('sb-url');
+    const keyInput = document.getElementById('sb-key');
+    if (urlInput) urlInput.value = url;
+    if (keyInput) keyInput.value = key;
+  }
+  m.classList.add('open');
+  SoundSystem.playPop();
+}
+
+function closeSupabaseModal() {
+  const m = document.getElementById('supabase-config-modal');
+  if (m) m.classList.remove('open');
+}
+
+async function handleSaveSupabaseConfig(e) {
+  if (e && e.preventDefault) e.preventDefault();
+  const url = document.getElementById('sb-url')?.value.trim();
+  const key = document.getElementById('sb-key')?.value.trim();
+  const btn = document.getElementById('sb-save-btn');
+
+  if (btn) btn.innerHTML = `<span class="material-symbols-outlined text-[16px] animate-spin">refresh</span><span>Connecting...</span>`;
+
+  try {
+    if (typeof CloudEngine !== 'undefined') {
+      await CloudEngine.connect(url, key);
+      SoundSystem.playSuccessChime();
+      showToast('🟢 Connected to Supabase Cloud Sanctuary!', 'cloud_done');
+      closeSupabaseModal();
+    }
+  } catch (err) {
+    showToast(`Connection failed: ${err.message || 'Check URL and key'}`, 'error');
+  } finally {
+    if (btn) btn.innerHTML = 'Test & Connect';
+  }
+}
+
+function handleDisconnectSupabase() {
+  if (confirm('Disconnect from Supabase? The site will revert to local offline storage mode.')) {
+    if (typeof CloudEngine !== 'undefined') {
+      CloudEngine.disconnect();
+    }
+    closeSupabaseModal();
+    showToast('Reverted to local offline mode.', 'cloud_off');
+  }
+}
+
+function showSQLSchemaModal() {
+  const m = document.getElementById('supabase-sql-modal');
+  const pre = document.getElementById('sql-schema-pre');
+  if (pre && typeof CloudEngine !== 'undefined') {
+    pre.textContent = CloudEngine.getSQLSchema();
+  }
+  if (m) m.classList.add('open');
+  SoundSystem.playPop();
+}
+
+function closeSQLSchemaModal() {
+  const m = document.getElementById('supabase-sql-modal');
+  if (m) m.classList.remove('open');
+}
+
+function copySQLSchema() {
+  if (typeof CloudEngine !== 'undefined') {
+    const sql = CloudEngine.getSQLSchema();
+    navigator.clipboard.writeText(sql).then(() => {
+      SoundSystem.playSuccessChime();
+      showToast('📋 SQL schema copied to clipboard!', 'content_copy');
+    }).catch(() => {
+      showToast('Please manually select and copy the SQL schema text.', 'info');
+    });
+  }
+}
+
+function triggerManualCloudSync() {
+  if (typeof CloudEngine === 'undefined' || !CloudEngine.isConfigured()) {
+    openSupabaseModal();
+    showToast('Please enter your Supabase URL & Key first.', 'info');
+    return;
+  }
+  if (!CloudEngine.getCurrentUser()) {
+    showToast('Please sign in to sync with cloud.', 'account_circle');
+    switchView('login');
+    return;
+  }
+  SoundSystem.playPop();
+  showToast('Syncing with Cloud Sanctuary...', 'sync');
+  CloudEngine.pushToCloud().then(() => {
+    SoundSystem.playSuccessChime();
+    showToast('☁️ Data synced to Cloud Sanctuary!', 'cloud_done');
+  });
+}
+
 // Window Event Listeners (Client-side execution only)
 if (typeof window !== 'undefined' && typeof document !== 'undefined' && document.addEventListener) {
   document.addEventListener('DOMContentLoaded', () => {
     loadSavedState();
     renderApp();
     setupAmbientControls();
+    if (typeof CloudEngine !== 'undefined') {
+      CloudEngine.init();
+    }
 
     // Initialize modal due datetime default to tomorrow same hour
     setQuickDueDateTime(24);
