@@ -20,172 +20,37 @@ if (typeof document === 'undefined') {
 const AppState = {
   // Current Student
   user: {
-    id: 'jishnu',
-    name: 'Jishnu',
-    email: 'jishnu.v@campus.edu',
+    id: 'student',
+    name: 'Student Scholar',
+    email: '',
     major: 'Computer Science',
     year: '3rd Year',
     companion: 'both', // 'pomi', 'barnaby', 'both'
-    streakDays: 7,
-    coins: 350,
-    waterLogged: 3,
+    streakDays: 1,
+    coins: 100,
+    waterLogged: 0,
     waterGoal: 6
   },
 
-  // Daily Schedule Timeline
-  schedule: [
-    {
-      id: 'sch-1',
-      title: 'Discrete Math Lecture',
-      category: 'class', // 'class', 'focus', 'downtime'
-      timeRange: '09:00 - 10:30',
-      location: 'Room 204 (Science Wing)',
-      description: 'Prof. Chen covering Graph Theory & Tree Traversal proofs.',
-      completed: true,
-      icon: 'menu_book'
-    },
-    {
-      id: 'sch-2',
-      title: 'Coffee & Walk Break ☕',
-      category: 'downtime',
-      timeRange: '10:30 - 11:15',
-      location: 'Quad Gardens',
-      description: 'Grab an iced oat latte and stretch legs before the next session. No screens required.',
-      completed: true,
-      icon: 'local_cafe'
-    },
-    {
-      id: 'sch-3',
-      title: 'Database Systems Lecture',
-      category: 'class',
-      timeRange: '11:15 - 12:45',
-      location: 'Hall B (Engineering Hub)',
-      description: 'Relational schema mapping & Normalization hands-on demo.',
-      completed: true,
-      icon: 'database'
-    },
-    {
-      id: 'sch-4',
-      title: 'Lunch with Friends 🥗',
-      category: 'downtime',
-      timeRange: '12:45 - 14:00',
-      location: 'North Dining Hall',
-      description: 'Meeting Marco and Sarah for poke bowls. Recharge your social battery!',
-      completed: false,
-      icon: 'restaurant'
-    },
-    {
-      id: 'sch-5',
-      title: 'Solo Focus: Database ER Diagram',
-      category: 'focus',
-      timeRange: '14:30 - 15:15',
-      location: 'Quiet Study Room 3',
-      description: 'Finish drafting 4 entities in Draw.io before submitting milestone 1.',
-      completed: false,
-      icon: 'bolt',
-      assignmentId: 'asg-1',
-      durationMinutes: 45
-    },
-    {
-      id: 'sch-6',
-      title: 'Guilt-Free Free Time! 🎮 Close books & relax',
-      category: 'downtime',
-      timeRange: '17:00 Onwards',
-      location: 'Dorm / Common Lounge',
-      description: 'Your academic tasks for the day are officially wrapped. Play video games, cook dinner, or catch up on shows completely guilt-free.',
-      completed: false,
-      icon: 'sports_esports'
-    }
-  ],
+  // Daily Schedule Timeline (Starts clean for user to fill)
+  schedule: [],
 
   // Current Selected Homework for Large View
-  selectedAssignmentId: 'asg-1',
+  selectedAssignmentId: null,
   pendingFocusAssignmentId: null,
 
-  // Assignments & Homework
-  assignments: [
-    {
-      id: 'asg-1',
-      title: 'ER DIAGRAM ASSIGNMENT',
-      course: 'Database Systems (CS 340)',
-      courseShort: 'CS 340',
-      description: 'Customer and order relationship schema model with primary and foreign keys.',
-      dueTimestamp: Date.now() + 6 * 3600 * 1000, // Due in 6 hours
-      dueText: 'Due Tonight • 6h left',
-      status: 'working', // 'todo', 'working', 'completed'
-      effort: 'medium', // 'low', 'medium', 'high'
-      durationMinutes: 45,
-      estimatedTime: '45 min',
-      steps: [
-        { id: 's1', text: 'Step 1: Read requirements PDF & schema specs', done: true },
-        { id: 's2', text: 'Step 2: Draft 3 tables (Customer, Order, LineItem)', done: false },
-        { id: 's3', text: 'Step 3: Quick peer review & export SVG', done: false }
-      ]
-    },
-    {
-      id: 'asg-2',
-      title: 'BANK ACCOUNT CLASSES',
-      course: 'CS 201 • Object-Oriented',
-      courseShort: 'CS 201',
-      description: 'Create getters, setters, and a simple withdraw method. Easy test cases provided!',
-      dueTimestamp: Date.now() + 21 * 3600 * 1000, // Due tomorrow 5 PM
-      dueText: 'Tomorrow • 5:00 PM',
-      status: 'todo',
-      effort: 'medium',
-      durationMinutes: 45,
-      estimatedTime: '45 min',
-      steps: [
-        { id: 's2-1', text: 'Review bank account UML spec', done: false },
-        { id: 's2-2', text: 'Code Account and SavingsAccount classes', done: false },
-        { id: 's2-3', text: 'Run JUnit test suite & verify', done: false }
-      ]
-    },
-    {
-      id: 'asg-3',
-      title: 'DISCRETE MATH PRACTICE PROBLEMS',
-      course: 'MATH 180 • Discrete Mathematics',
-      courseShort: 'MATH 180',
-      description: 'Read Chapter 4 summary and check 5 truth tables. No formal writeup needed!',
-      dueTimestamp: Date.now() + 50 * 3600 * 1000, // Due in ~2 days
-      dueText: 'Friday • Anytime',
-      status: 'todo',
-      effort: 'low',
-      durationMinutes: 30,
-      estimatedTime: '30 min',
-      steps: [
-        { id: 's3-1', text: 'Read page 142 summary sheet', done: false },
-        { id: 's3-2', text: 'Solve truth tables 1 through 3', done: false },
-        { id: 's3-3', text: 'Self-check solutions in back of text', done: false }
-      ]
-    },
-    {
-      id: 'asg-4',
-      title: 'WEB APPLICATION WIREFRAMES',
-      course: 'DES 110 • Interaction Design',
-      courseShort: 'DES 110',
-      description: 'Low-fidelity layout sketches and primary user flows.',
-      dueTimestamp: Date.now() - 14 * 3600 * 1000, // Completed yesterday
-      dueText: 'Completed Yesterday',
-      status: 'completed',
-      effort: 'low',
-      durationMinutes: 60,
-      estimatedTime: '1 hour',
-      steps: [
-        { id: 's4-1', text: 'Sketch home feed layout', done: true },
-        { id: 's4-2', text: 'Review color contrast standards', done: true }
-      ]
-    }
-  ],
+  // Assignments & Homework (Starts clean for user to fill)
+  assignments: [],
 
   // Focus Timer Session State
   timer: {
-    activeAssignmentId: 'asg-1',
-    activeStepIndex: 1, // current sprint step
-    durationMinutes: 45,
-    secondsRemaining: 45 * 60,
+    activeAssignmentId: null,
+    activeStepIndex: 0,
+    durationMinutes: 25,
+    secondsRemaining: 25 * 60,
     isRunning: false,
     intervalId: null,
-    totalSeconds: 45 * 60,
+    totalSeconds: 25 * 60,
     sessionSecondsElapsed: 0,
     lastMilestoneAwarded: 0
   },
@@ -332,19 +197,32 @@ function loadSavedState() {
     if (saved) {
       const parsed = JSON.parse(saved);
       if (parsed.user) AppState.user = Object.assign(AppState.user, parsed.user);
-      if (parsed.schedule && Array.isArray(parsed.schedule)) AppState.schedule = parsed.schedule;
+      
+      // Filter out legacy mock IDs so user starts with a clean slate
+      const MOCK_ASG_IDS = new Set(['asg-1', 'asg-2', 'asg-3', 'asg-4']);
+      const MOCK_SCH_IDS = new Set(['sch-1', 'sch-2', 'sch-3', 'sch-4', 'sch-5', 'sch-6']);
+
+      if (parsed.schedule && Array.isArray(parsed.schedule)) {
+        AppState.schedule = parsed.schedule.filter(item => !MOCK_SCH_IDS.has(item.id));
+      }
       if (parsed.assignments && Array.isArray(parsed.assignments)) {
-        AppState.assignments = parsed.assignments.map((asg, idx) => {
-          if (!asg.dueTimestamp) {
-            asg.dueTimestamp = Date.now() + (idx + 1) * 8 * 3600 * 1000;
-          }
-          return asg;
-        });
+        AppState.assignments = parsed.assignments
+          .filter(asg => !MOCK_ASG_IDS.has(asg.id))
+          .map((asg, idx) => {
+            if (!asg.dueTimestamp) {
+              asg.dueTimestamp = Date.now() + (idx + 1) * 8 * 3600 * 1000;
+            }
+            return asg;
+          });
       }
       if (parsed.timetable) AppState.timetable = parsed.timetable;
       if (parsed.stickers && Array.isArray(parsed.stickers)) AppState.stickers = parsed.stickers;
       if (parsed.analytics) AppState.analytics = Object.assign(AppState.analytics, parsed.analytics);
-      if (parsed.selectedAssignmentId) AppState.selectedAssignmentId = parsed.selectedAssignmentId;
+      if (parsed.selectedAssignmentId && !MOCK_ASG_IDS.has(parsed.selectedAssignmentId)) {
+        AppState.selectedAssignmentId = parsed.selectedAssignmentId;
+      } else {
+        AppState.selectedAssignmentId = AppState.assignments[0]?.id || null;
+      }
     }
   } catch (e) {
     console.warn('Could not load localStorage state:', e);
@@ -813,6 +691,23 @@ function renderSchedule(filterCategory = 'all') {
 
   timelineContainer.innerHTML = '';
 
+  if (filtered.length === 0) {
+    timelineContainer.innerHTML = `
+      <div class="neo-card bg-surface-container-low p-8 text-center my-4 flex flex-col items-center justify-center border border-dashed border-hairline-border">
+        <div class="w-16 h-16 rounded-full bg-surface-container-high flex items-center justify-center mb-3 text-primary">
+          <span class="material-symbols-outlined text-[32px]">calendar_today</span>
+        </div>
+        <h4 class="font-headline-md text-on-surface mb-1">No Schedule Events Yet</h4>
+        <p class="font-body-md text-on-surface-variant max-w-md mb-5">Your schedule is a calm, clean slate! Add your lectures, study blocks, breaks, or chill downtime to build your gentle routine.</p>
+        <button class="btn-pill btn-primary btn-md flex items-center gap-2" onclick="openAddEventModal()">
+          <span class="material-symbols-outlined text-[18px]">add_circle</span>
+          <span>Add Your First Event</span>
+        </button>
+      </div>
+    `;
+    return;
+  }
+
   filtered.forEach(item => {
     let nodeBg = 'bg-surface-container-high text-on-surface-variant';
     let cardBg = 'bg-surface-container-lowest';
@@ -875,7 +770,7 @@ function deleteScheduleItem(id) {
     const deleted = AppState.schedule.splice(idx, 1)[0];
     persistState();
     if (typeof CloudEngine !== 'undefined' && CloudEngine.isConfigured()) {
-      CloudEngine.pushToCloud();
+      CloudEngine.deleteSchedule(id);
     }
     renderSchedule();
     SoundSystem.playPop(300);
@@ -1342,7 +1237,7 @@ function deleteAssignment(assignmentId) {
     }
     persistState();
     if (typeof CloudEngine !== 'undefined' && CloudEngine.isConfigured()) {
-      CloudEngine.pushToCloud();
+      CloudEngine.deleteHomework(assignmentId);
     }
     renderAssignments();
     renderMyDayPendingHomeworks();
@@ -1598,7 +1493,18 @@ function syncFocusTimerChecklist() {
   const counterEl = document.getElementById('timer-task-counter');
   
   const currentAsg = AppState.assignments.find(a => a.id === AppState.timer.activeAssignmentId) || AppState.assignments[0];
-  if (!currentAsg || !checklistEl) return;
+  if (!currentAsg || !checklistEl) {
+    if (badgeEl) badgeEl.textContent = 'Free Study Session';
+    if (counterEl) counterEl.textContent = 'Free Flow';
+    if (checklistEl) {
+      checklistEl.innerHTML = `
+        <div class="p-3 bg-surface-container-low rounded-xl text-center border border-dashed border-hairline-border">
+          <p class="font-body-sm text-on-surface-variant">Free focus mode active. Add homework tasks in Homework Hub anytime!</p>
+        </div>
+      `;
+    }
+    return;
+  }
 
   if (badgeEl) {
     badgeEl.textContent = `Focus Target: ${currentAsg.title}`;
@@ -2806,23 +2712,37 @@ function simulateLogin(type = 'Email Login') {
 
 async function handleRegisterSubmit(e, isSso = false) {
   if (e && e.preventDefault) e.preventDefault();
-  const name = isSso ? 'New Campus Scholar' : (document.getElementById('reg-name')?.value || 'Student');
-  const email = isSso ? 'scholar@campus.edu' : (document.getElementById('reg-email')?.value || 'scholar@campus.edu');
+  const name = isSso ? 'New Campus Scholar' : (document.getElementById('reg-name')?.value.trim() || 'Student');
+  const email = isSso ? 'scholar@campus.edu' : (document.getElementById('reg-email')?.value.trim() || 'scholar@campus.edu');
   const major = document.getElementById('reg-major')?.value || 'Computer Science';
   const year = document.getElementById('reg-year')?.value || '3rd Year';
-  const password = document.getElementById('reg-password')?.value || 'studyharder2025';
+  const password = document.getElementById('reg-password')?.value;
 
   if (typeof CloudEngine !== 'undefined' && CloudEngine.isConfigured() && !isSso) {
     try {
       showToast('Creating cloud account in Supabase...', 'cloud_upload');
-      await CloudEngine.signUp(email, password, name, major, year);
+      const data = await CloudEngine.signUp(email, password, name, major, year);
       triggerConfetti();
       SoundSystem.playFanfare();
-      showToast(`🎉 Cloud account created for ${name}!`, 'celebration');
-      setTimeout(() => switchView('schedule'), 800);
+
+      AppState.user.name = name;
+      AppState.user.email = email;
+      AppState.user.major = major;
+      AppState.user.year = year;
+      AppState.user.streakDays = 1;
+      persistState();
+      renderApp();
+
+      if (!data.session) {
+        showToast(`🎉 Account created for ${name}! If confirmation is required, check your email link before sign in.`, 'mark_email_read');
+      } else {
+        showToast(`🎉 Cloud account ready for ${name}! Welcome.`, 'celebration');
+      }
+      setTimeout(() => switchView('schedule'), 1000);
       return;
     } catch (err) {
-      showToast(`Cloud registration: ${err.message}`, 'error');
+      showToast(`Registration: ${err.message}`, 'error');
+      return;
     }
   }
 
@@ -2923,23 +2843,30 @@ function copySQLSchema() {
   }
 }
 
-function triggerManualCloudSync() {
+async function triggerManualCloudSync() {
   if (typeof CloudEngine === 'undefined' || !CloudEngine.isConfigured()) {
     openSupabaseModal();
     showToast('Please enter your Supabase URL & Key first.', 'info');
     return;
   }
-  if (!CloudEngine.getCurrentUser()) {
+  let user = CloudEngine.getCurrentUser();
+  if (!user) {
+    user = await CloudEngine.checkCurrentSession();
+  }
+  if (!user) {
     showToast('Please sign in to sync with cloud.', 'account_circle');
     switchView('login');
     return;
   }
   SoundSystem.playPop();
   showToast('Syncing with Cloud Sanctuary...', 'sync');
-  CloudEngine.pushToCloud().then(() => {
+  try {
+    await CloudEngine.pushToCloud();
     SoundSystem.playSuccessChime();
     showToast('☁️ Data synced to Cloud Sanctuary!', 'cloud_done');
-  });
+  } catch (e) {
+    showToast(`Sync failed: ${e.message}`, 'error');
+  }
 }
 
 // Window Event Listeners (Client-side execution only)

@@ -83,6 +83,15 @@ alter table public.homework enable row level security;
 alter table public.schedule enable row level security;
 alter table public.focus_logs enable row level security;
 
+-- Drop existing policies if re-running
+drop policy if exists "Users can view own profile" on public.profiles;
+drop policy if exists "Users can update own profile" on public.profiles;
+drop policy if exists "Users can insert own profile" on public.profiles;
+drop policy if exists "Public leaderboard profiles read" on public.profiles;
+drop policy if exists "Users manage own homework" on public.homework;
+drop policy if exists "Users manage own schedule" on public.schedule;
+drop policy if exists "Users manage own focus_logs" on public.focus_logs;
+
 -- RLS Policies (Users can only access their own data)
 create policy "Users can view own profile" on public.profiles for select using (auth.uid() = id);
 create policy "Users can update own profile" on public.profiles for update using (auth.uid() = id);
@@ -94,6 +103,44 @@ create policy "Public leaderboard profiles read" on public.profiles for select u
 create policy "Users manage own homework" on public.homework for all using (auth.uid() = user_id);
 create policy "Users manage own schedule" on public.schedule for all using (auth.uid() = user_id);
 create policy "Users manage own focus_logs" on public.focus_logs for all using (auth.uid() = user_id);
+
+-- 5. Automatic Profile Creation Trigger on Sign Up
+create or replace function public.handle_new_user()
+returns trigger as $$
+begin
+  insert into public.profiles (id, email, name, major, year, streak_days, coins, water_logged, water_goal, companion, total_study_minutes)
+  values (
+    new.id,
+    new.email,
+    coalesce(new.raw_user_meta_data->>'name', split_part(new.email, '@', 1)),
+    coalesce(new.raw_user_meta_data->>'major', 'Computer Science'),
+    coalesce(new.raw_user_meta_data->>'year', '3rd Year'),
+    1, 100, 0, 6, 'both', 0
+  )
+  on conflict (id) do update set
+    email = excluded.email,
+    name = coalesce(excluded.name, public.profiles.name),
+    updated_at = now();
+  return new;
+end;
+$$ language plpgsql security definer;
+
+drop trigger if exists on_auth_user_created on auth.users;
+create trigger on_auth_user_created
+  after insert on auth.users
+  for each row execute procedure public.handle_new_user();
+
+-- Backfill any existing registered users who do not have a profile row yet
+insert into public.profiles (id, email, name, major, year, streak_days, coins, water_logged, water_goal, companion, total_study_minutes)
+select
+  id,
+  email,
+  coalesce(raw_user_meta_data->>'name', split_part(email, '@', 1)),
+  coalesce(raw_user_meta_data->>'major', 'Computer Science'),
+  coalesce(raw_user_meta_data->>'year', '3rd Year'),
+  1, 100, 0, 6, 'both', 0
+from auth.users
+on conflict (id) do nothing;
 `;
 
   function isConfigured() {
@@ -164,7 +211,7 @@ create policy "Users manage own focus_logs" on public.focus_logs for all using (
   }
 
   async function checkCurrentSession() {
-    if (!client) return;
+    if (!client) return null;
     try {
       const { data: { session } } = await client.auth.getSession();
       currentUser = session ? session.user : null;
@@ -172,8 +219,10 @@ create policy "Users manage own focus_logs" on public.focus_logs for all using (
       if (currentUser) {
         await pullFromCloud();
       }
+      return currentUser;
     } catch (e) {
       console.warn('Error checking session:', e);
+      return null;
     }
   }
 
@@ -206,35 +255,47 @@ create policy "Users manage own focus_logs" on public.focus_logs for all using (
     
     currentUser = data.user;
     if (currentUser) {
-      // Upsert initial profile
-      await client.from('profiles').upsert({
-        id: currentUser.id,
-        email: email,
-        name: name,
-        major: major,
-        year: year,
-        streak_days: AppState.user.streakDays || 1,
-        coins: AppState.user.coins || 100,
-        water_logged: AppState.user.waterLogged || 0,
-        water_goal: AppState.user.waterGoal || 6,
-        companion: AppState.user.companion || 'both'
-      });
-      // Push local data to cloud
-      await pushToCloud();
+      // If session exists (auto-confirm enabled or active session)
+      if (data.session) {
+        try {
+          await client.from('profiles').upsert({
+            id: currentUser.id,
+            email: email,
+            name: name,
+            major: major,
+            year: year,
+            streak_days: AppState.user.streakDays || 1,
+            coins: AppState.user.coins || 100,
+            water_logged: AppState.user.waterLogged || 0,
+            water_goal: AppState.user.waterGoal || 6,
+            companion: AppState.user.companion || 'both'
+          });
+          await pushToCloud();
+        } catch (e) {
+          console.warn('Direct profile upsert error (handled by SQL trigger):', e);
+        }
+      }
     }
     return data;
   }
 
   async function signIn(email, password) {
     if (!client) throw new Error('Cloud Sanctuary not configured. Enter Supabase credentials first.');
-    const { data, error } = await client.auth.signInWithPassword({
-      email,
-      password
-    });
-    if (error) throw error;
-    currentUser = data.user;
-    await pullFromCloud();
-    return data;
+    try {
+      const { data, error } = await client.auth.signInWithPassword({
+        email,
+        password
+      });
+      if (error) throw error;
+      currentUser = data.user;
+      await pullFromCloud();
+      return data;
+    } catch (err) {
+      if (err.message && err.message.toLowerCase().includes('email not confirmed')) {
+        throw new Error('Email not confirmed! In Supabase Dashboard -> Authentication -> Providers -> Email, toggle OFF "Confirm email", or click the verification link in your inbox.');
+      }
+      throw err;
+    }
   }
 
   async function signOut() {
@@ -339,7 +400,7 @@ create policy "Users manage own focus_logs" on public.focus_logs for all using (
 
       // 2. Pull Homework
       const { data: hwList } = await client.from('homework').select('*').eq('user_id', uid);
-      if (hwList && hwList.length > 0) {
+      if (Array.isArray(hwList)) {
         AppState.assignments = hwList.map(h => ({
           id: h.id,
           title: h.title,
@@ -358,7 +419,7 @@ create policy "Users manage own focus_logs" on public.focus_logs for all using (
 
       // 3. Pull Schedule
       const { data: schList } = await client.from('schedule').select('*').eq('user_id', uid);
-      if (schList && schList.length > 0) {
+      if (Array.isArray(schList)) {
         AppState.schedule = schList.map(s => ({
           id: s.id,
           title: s.title,
@@ -380,6 +441,26 @@ create policy "Users manage own focus_logs" on public.focus_logs for all using (
       updateCloudStatusUI('error');
     } finally {
       syncInProgress = false;
+    }
+  }
+
+  // Delete individual homework from cloud database
+  async function deleteHomework(id) {
+    if (!client || !currentUser) return;
+    try {
+      await client.from('homework').delete().eq('id', id).eq('user_id', currentUser.id);
+    } catch (e) {
+      console.warn('Failed to delete cloud homework item:', e);
+    }
+  }
+
+  // Delete individual schedule event from cloud database
+  async function deleteSchedule(id) {
+    if (!client || !currentUser) return;
+    try {
+      await client.from('schedule').delete().eq('id', id).eq('user_id', currentUser.id);
+    } catch (e) {
+      console.warn('Failed to delete cloud schedule item:', e);
     }
   }
 
@@ -484,11 +565,14 @@ create policy "Users manage own focus_logs" on public.focus_logs for all using (
     isConfigured,
     getStoredCredentials,
     getCurrentUser: () => currentUser,
+    checkCurrentSession,
     signUp,
     signIn,
     signOut,
     pushToCloud,
     pullFromCloud,
+    deleteHomework,
+    deleteSchedule,
     logFocusSession,
     fetchLiveLeaderboard,
     updateCloudStatusUI,

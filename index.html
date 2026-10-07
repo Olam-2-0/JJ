@@ -1094,9 +1094,9 @@
             <div>
               <label class="form-label" for="login-email">
                 <span>Student Email / Campus ID</span>
-                <span class="font-body-sm text-secondary">e.g. jishnu@uni.edu</span>
+                <span class="font-body-sm text-secondary">e.g. maya@campus.edu</span>
               </label>
-              <input class="form-input" id="login-email" type="email" value="jishnu.v@campus.edu" placeholder="student@campus.edu" required/>
+              <input class="form-input" id="login-email" type="email" placeholder="student@campus.edu" required/>
             </div>
 
             <div>
@@ -1104,7 +1104,7 @@
                 <label class="form-label mb-0" for="login-password">Secret Passcode</label>
                 <a class="text-xs text-primary hover:underline" href="#" onclick="alert('Password reset link sent to student mail!')">Forgot passcode?</a>
               </div>
-              <input class="form-input" id="login-password" type="password" value="studyharder2025" required/>
+              <input class="form-input" id="login-password" type="password" placeholder="Enter your secret passcode" required/>
             </div>
 
             <label class="flex items-center gap-2 cursor-pointer select-none mt-1">
@@ -1326,7 +1326,7 @@
 
             <div>
               <label class="form-label" for="reg-password">Secret Passcode</label>
-              <input class="form-input" id="reg-password" placeholder="At least 6 characters" required type="password" minlength="6" value="studyharder2025"/>
+              <input class="form-input" id="reg-password" placeholder="At least 6 characters" required type="password" minlength="6"/>
               <p class="font-body-sm text-secondary text-xs mt-1">Secures your account for cross-device sign-in.</p>
             </div>
 
@@ -1901,6 +1901,11 @@
           <span class="text-xs">Your keys are saved safely in your own browser's storage and never exposed.</span>
         </div>
 
+        <div class="p-3 bg-amber-50 rounded-xl text-body-sm text-amber-900 border border-amber-200 flex items-start gap-2">
+          <span class="material-symbols-outlined text-amber-600 text-[18px] shrink-0 mt-0.5">lightbulb</span>
+          <span class="text-xs"><strong>Tip for Instant Sign-In:</strong> In Supabase Dashboard &gt; <em>Authentication &gt; Providers &gt; Email</em>, toggle <strong>OFF "Confirm email"</strong> so you can log in immediately after registration without having to click a confirmation link!</span>
+        </div>
+
         <div class="flex items-center gap-3 pt-2">
           <button class="btn-pill btn-soft flex-1" onclick="closeSupabaseModal()" type="button">Cancel</button>
           <button class="btn-pill btn-primary flex-1" id="sb-save-btn" type="submit">Test &amp; Connect</button>
@@ -1956,87 +1961,5 @@
   <script src="cloud.js"></script>
   <script src="audio.js"></script>
   <script src="app.js"></script>
-  <script>
-    // Additional View Helpers
-    function openAddEventModal() {
-      const m = document.getElementById('add-event-modal');
-      if (m) m.classList.add('open');
-      SoundSystem.playPop();
-    }
-
-    function closeAddEventModal() {
-      const m = document.getElementById('add-event-modal');
-      if (m) m.classList.remove('open');
-    }
-
-    function handleAddEventSubmit(e) {
-      e.preventDefault();
-      const title = document.getElementById('evt-title').value.trim();
-      const timeRange = document.getElementById('evt-time').value.trim();
-      const location = document.getElementById('evt-location').value.trim() || 'Campus';
-      const category = document.getElementById('evt-category').value;
-
-      if (!title || !timeRange) return;
-
-      AppState.schedule.push({
-        id: 'sch-' + Date.now(),
-        title: title,
-        category: category,
-        timeRange: timeRange,
-        location: location,
-        description: `Scheduled ${category} session.`,
-        completed: false,
-        icon: category === 'class' ? 'school' : category === 'focus' ? 'bolt' : 'local_cafe'
-      });
-
-      persistState();
-      renderSchedule();
-      closeAddEventModal();
-      document.getElementById('add-event-form').reset();
-      SoundSystem.playSuccessChime();
-      showToast(`Added "${title}" to your rhythm!`, 'calendar_today');
-    }
-
-    function simulateLogin(type) {
-      const submitBtn = document.getElementById('login-submit-btn');
-      if (submitBtn) {
-        submitBtn.innerHTML = `<span class="material-symbols-outlined text-[18px] animate-spin">refresh</span><span>Warming up your desk...</span>`;
-      }
-      setTimeout(() => {
-        if (submitBtn) {
-          submitBtn.innerHTML = `<span class="material-symbols-outlined text-[18px]">check_circle</span><span>Desk Ready! Entering...</span>`;
-        }
-        setTimeout(() => {
-          switchView('schedule');
-          showToast(`Welcome back! Logged in via ${type}.`, 'waving_hand');
-          SoundSystem.playSuccessChime();
-        }, 400);
-      }, 700);
-    }
-
-    function handleRegisterSubmit(e, isSso = false) {
-      if (e && e.preventDefault) e.preventDefault();
-      const name = isSso ? 'New Campus Scholar' : (document.getElementById('reg-name')?.value || 'Student');
-      const email = isSso ? 'scholar@campus.edu' : (document.getElementById('reg-email')?.value || 'scholar@campus.edu');
-      const major = document.getElementById('reg-major')?.value || 'Computer Science';
-      const year = document.getElementById('reg-year')?.value || '1st Year';
-
-      AppState.user.name = name;
-      AppState.user.email = email;
-      AppState.user.major = major;
-      AppState.user.year = year;
-      AppState.user.streakDays = 1;
-      persistState();
-      renderApp();
-
-      triggerConfetti();
-      SoundSystem.playSuccessChime();
-      showToast(`Account created for ${name}! Welcome to your sanctuary.`, 'celebration');
-
-      setTimeout(() => {
-        switchView('schedule');
-      }, 600);
-    }
-  </script>
 </body>
 </html>
